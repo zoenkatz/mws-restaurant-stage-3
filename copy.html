@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" src="//normalize-css.googlecode.com/svn/trunk/normalize.css" />
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#317EFB"/>
+    <title>Restaurant Reviews</title>
+</head>
+
+<body>
+<header>
+    <nav role="navigation">
+        <h1><a href="/" role="link" aria-label="link to restaurant reviews">Restaurant Reviews</a></h1>
+    </nav>
+</header>
+
+<main id="maincontent" aria-label="Main Content">
+    <section id="map-container">
+        <div id="map" role="application"></div>
+    </section>
+    <section id="filter-results-container">
+        <div class="filter-options">
+            <h2>Filter Results</h2>
+            <div class="select-boxes" aria-label="select boxes of restaurants">
+                <select id="neighborhoods-select" aria-label="neighborhoods-select" name="neighborhoods" onchange="updateRestaurants()" role="combobox">
+                    <option label="all-neighborhoods" value="all" role="option">All Neighborhoods</option>
+                </select>
+                <select id="cuisines-select" aria-label="cuisines-select" name="cuisines" onchange="updateRestaurants()" role="combobox">
+                    <option label="all-cuisines" value="all" role="option">All Cuisines</option>
+                </select>
+            </div>
+        </div>
+        <ul id="restaurants-list" aria-label="restaurants list"></ul>
+    </section>
+</main>
+
+<script type="application/javascript" charset="utf-8" src="js/idb.js"></script>
+<script type="application/javascript" charset="utf-8" src="js/dbhelper.js"></script>
+<script type="application/javascript" charset="utf-8" src="js/main.js"></script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?libraries=places&callback=initMap"></script>
+
+
+<footer id="footer">
+    Copyright (c) 2017 <a href="/"><strong>Restaurant Reviews</strong></a> All Rights Reserved.
+</footer>
+
+</body>
+
+</html>
