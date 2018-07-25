@@ -498,7 +498,7 @@ nav h1 a {
     margin: 10px;
 }
 
-.submit-review{
+#submit-review{
     background-color: #182084;
     border-bottom: 3px solid #eee;
     color: #fff;
@@ -518,3 +518,8 @@ h5{
 #offline-notice{
     color: darkred;
 }
+
+#favorite-rest{
+  margin-right: 27px;
+}
+

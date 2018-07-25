@@ -61,20 +61,72 @@ class DBHelper {
         });
     }
 
-  static openDatabase() {
-        // If the browser doesn't support service worker,
-        // we don't care about having a database
-        if (!navigator.serviceWorker) {
-            return Promise.resolve();
-        }
+    static getStoredReviews() {
+        const idbPromise = DBHelper.openDatabase();
 
-        return idb.open('mws-restaurant', 1, function(upgradeDb) {
-            let store = upgradeDb.createObjectStore('restaurants', {
-                keyPath: 'id'
-            });
-            store.createIndex('by-date', 'createdAt');
-        });
+        return idbPromise.then((db) => {
+            if (!db) {
+                return;
+            }
+            let tx = db.transaction('reviews');
+            let store = tx.objectStore('reviews').index('by-date');
+            db.close();
+
+            return store.getAll();
+        })
+
     }
+
+  static openDatabase() {
+      let store;
+
+      // If the browser doesn't support service worker,
+      // we don't care about having a database
+      if (!navigator.serviceWorker) {
+          return Promise.resolve();
+      }
+
+      return idb.open('mws-restaurant', 1, function (upgradeDb) {
+          switch(upgradeDb.oldVersion) {
+              case 0:
+                  store = upgradeDb.createObjectStore('restaurants', {
+                      keyPath: 'id'
+                  });
+                  store.createIndex('by-date', 'createdAt');
+
+              case 1:
+                  store = upgradeDb.createObjectStore('reviews', {
+                      keyPath: 'id'
+                  });
+                  store.createIndex('by-date', 'createdAt');
+          }
+
+      })
+  }
+
+    static saveReviewsInDatabase(reviews){
+        const idbPromise = DBHelper.openDatabase();
+        idbPromise.then(function(db) {
+            if (!db) return;
+
+            let tx = db.transaction('reviews', 'readwrite');
+            let store = tx.objectStore('reviews');
+            reviews.forEach(function(review) {
+                store.put(review);
+            });
+
+            // limit store to 30 items
+            store.index('by-date').openCursor(null, "prev").then(function(cursor) {
+                return cursor.advance(30);
+            }).then(function deleteReview(cursor) {
+                if (!cursor) return;
+                cursor.delete();
+                return cursor.continue().then(deleteReview);
+            });
+
+        });
+    };
+
 
     static saveRestaurantsInDatabase(restaurants){
         const idbPromise = DBHelper.openDatabase();
@@ -154,6 +206,28 @@ class DBHelper {
       }
     });
   }
+
+  static favoriteRestaurant(id ,favoriteData){
+      const data = {
+          method: 'PUT',
+          headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+          }
+      };
+
+      return fetch(`http://localhost:1337/restaurants/${id}/?is_favorite=${favoriteData.is_favorite}`, data).then((res) => {
+          return res.json();
+      }).catch((error) => {
+          console.log('error:', error);
+          return error;
+      }).then((favorite) => {
+          console.log(favorite);
+
+          return favorite;
+      });
+  };
+
 
   /**
    * Fetch restaurants by a cuisine type with proper error handling.

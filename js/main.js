@@ -5,6 +5,7 @@ let restaurants,
 var map;
 var markers = [];
 let once = false;
+let mapScriptOnce = false;
 
 /**
  * Fetch neighborhoods and cuisines as soon as the page is loaded.
@@ -77,29 +78,53 @@ fillCuisinesHTML = (cuisines = self.cuisines) => {
 }
 
 /**
+ * Lazy load Map
+ */
+lazyLoadMap = () => {
+    if(!mapScriptOnce) {
+        mapScriptOnce = true;
+        const mapScript = document.createElement('script');
+        mapScript.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyCZjLFAkSacGSwowvClrAw17UHbcjBU4ak&libraries=places";
+        mapScript.id = 'google-map';
+        document.body.appendChild(mapScript);
+        setTimeout(initMap, 500);
+    }
+};
+
+/**
  * Initialize Google map, called from HTML.
  */
 window.initMap = () => {
-  let loc = {
-    lat: 40.722216,
-    lng: -73.987501
-  };
+    if (window.google && google.maps || document.getElementById('google-map')) {
+        let loc = {
+            lat: 40.722216,
+            lng: -73.987501
+        };
 
 
-  self.map = new google.maps.Map(document.getElementById('map'), {
-    zoom: 12,
-    center: loc,
-    scrollwheel: false
-  });
+        self.map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 12,
+            center: loc,
+            scrollwheel: false
+        });
 
-    addMarkersToMap();
+        addMarkersToMap();
+
+    }
+
+    else if(!mapScriptOnce){
+        lazyLoadMap();
+    }
+
+
+
 };
 
 updateRestaurants = () => {
     updateRestaurants();
 };
 
-document.addEventListener("wheel", () => {
+document.addEventListener("scroll", () => {
   if (!once) {
     once = true;
     initMap();
@@ -214,6 +239,6 @@ registerServiceWorker = () => {
         console.log('Registration failed!');
 
     });
-}
+};
 
 

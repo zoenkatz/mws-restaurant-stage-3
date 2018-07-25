@@ -1,41 +1,65 @@
 let restaurant;
 let map;
 let once = false;
+let mapScriptOnce = false;
 
 /**
  * Initialize Google map, called from HTML.
  */
 window.initMap = () => {
-      self.map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 16,
-        center: self.restaurant.latlng,
-        scrollwheel: false
-      });
-      DBHelper.mapMarkerForRestaurant(self.restaurant, self.map);
-        // google.maps.event.addListener(this.map, 'tilesloaded', function() {
-        //     let images = document.querySelectorAll('#map img');
-        //     images.forEach(function(image) {
-        //         image.alt = "Google Maps Image";
-        //     });
-        // });
+
+    if (window.google && google.maps || document.getElementById('google-map')) {
+        self.map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 16,
+            center: self.restaurant.latlng,
+            scrollwheel: false
+        });
+        DBHelper.mapMarkerForRestaurant(self.restaurant, self.map);
+        google.maps.event.addListener(this.map, 'tilesloaded', function () {
+            let images = document.querySelectorAll('#map img');
+            images.forEach(function (image) {
+                image.alt = "Google Maps Image";
+                //image.src = "https://maps.googleapis.com/maps/api/staticmap?center=Brooklyn+Bridge,New+York,NY&zoom=13&size=600x300&maptype=roadmap&markers=color:blue%7Clabel:S%7C40.702147,-74.015794&markers=color:green%7Clabel:G%7C40.711614,-74.012318&markers=color:red%7Clabel:C%7C40.718217,-73.998284&key=AIzaSyCZjLFAkSacGSwowvClrAw17UHbcjBU4ak";
+            });
+        });
+    }
+    else if(!mapScriptOnce){
+        lazyLoadMap();
+    }
+};
+
+/**
+ * Lazy load Map
+ */
+lazyLoadMap = () => {
+    if(!mapScriptOnce) {
+        mapScriptOnce = true;
+        const mapScript = document.createElement('script');
+        mapScript.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyCZjLFAkSacGSwowvClrAw17UHbcjBU4ak&libraries=places";
+        mapScript.id = 'google-map';
+        document.body.appendChild(mapScript);
+        setTimeout(initMap, 500);
+    }
 };
 
 document.addEventListener('DOMContentLoaded', (event) => {
+
+    registerServiceWorker();
         fetchRestaurantFromURL((error, restaurant) => {
             if (error) { // Got an error!
                 console.error(error);
             }
             else{
                 fillBreadcrumb();
+               // initMap();
             }
         });
 });
 
-document.addEventListener('wheel', () => {
+document.addEventListener("scroll", () => {
     if(!once) {
         once = true;
         initMap();
-        //fillBreadcrumb();
     }
 });
 
@@ -59,7 +83,7 @@ fetchRestaurantFromURL = (callback) => {
         return;
       }
       fillRestaurantHTML();
-      registerServiceWorker();
+
       callback(null, restaurant)
     });
   }
@@ -120,6 +144,95 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
   const title = document.createElement('h2');
   title.innerHTML = 'Reviews';
   container.appendChild(title);
+
+  //favorite restaurant
+    const favoriteNotify = document.createElement('p');
+    let isFavorite = false;
+
+    DBHelper.fetchRestaurantById(self.restaurant.id, ((error, restaurant) => {
+        if (error) { // Got an error!
+            console.error(error);
+        }
+        else{
+            isFavorite = restaurant.is_favorite;
+            isFavorite === 'true' ? favoriteNotify.innerHTML = `Restaurant is favorite! :-)` : favoriteNotify.innerHTML = `Restaurant is not favorite yet`;
+            favoriteNotify.setAttribute('id', 'isFavorite');
+            container.prepend(favoriteNotify);
+        }
+    }));
+
+
+
+    const favoriteDiv = document.createElement('div');
+    favoriteDiv.setAttribute('class', 'favorite-radio');
+    container.appendChild(favoriteDiv);
+
+    const labelFavorite = document.createElement('label');
+    labelFavorite.innerHTML = "Favorite restaurant: ";
+    labelFavorite.setAttribute('for', 'favorite-rest');
+    favoriteDiv.appendChild(labelFavorite);
+
+    const inputFavorite = document.createElement('input');
+    inputFavorite.setAttribute('name', 'toggle');
+    inputFavorite.setAttribute('type', 'radio');
+    inputFavorite.setAttribute('id', 'favorite-rest');
+    favoriteDiv.appendChild(inputFavorite);
+
+    inputFavorite.addEventListener('click', (e) => {
+       // e.preventDefault();
+
+        const favoriteData = {
+            is_favorite: true
+        };
+
+        DBHelper.favoriteRestaurant(self.restaurant.id, favoriteData).then((rest) => {
+            rest.is_favorite === 'true' ? favoriteNotify.innerHTML = `Restaurant is favorite! :-)` : favoriteNotify.innerHTML = `Restaurant is not favorite yet`;
+
+            DBHelper.getStoredRestaurants().then((restaurants) => {
+                restaurants.find((restaurant) => {
+                    return restaurant.id === self.restaurant.id
+                }).is_favorite = rest.is_favorite;
+
+                DBHelper.saveRestaurantsInDatabase(restaurants);
+
+
+            });
+        });
+    });
+
+    const labelUnFavorite = document.createElement('label');
+    labelUnFavorite.innerHTML = "Un favorite restaurant: ";
+    labelUnFavorite.setAttribute('for', 'unfavorite-rest');
+    favoriteDiv.appendChild(labelUnFavorite);
+
+    const inputNotFavorite = document.createElement('input');
+    inputNotFavorite.setAttribute('name', 'toggle');
+    inputNotFavorite.setAttribute('type', 'radio');
+    inputNotFavorite.setAttribute('id', 'unfavorite-rest');
+    favoriteDiv.appendChild(inputNotFavorite);
+
+    inputNotFavorite.addEventListener('click', (e) => {
+       // e.preventDefault();
+
+        const favoriteData = {
+            is_favorite: false
+        };
+
+        DBHelper.favoriteRestaurant(self.restaurant.id, favoriteData).then((rest) => {
+            rest.is_favorite === 'true' ? favoriteNotify.innerHTML = `Restaurant is favorite! :-)` : favoriteNotify.innerHTML = `Restaurant is not favorite yet`;
+
+            DBHelper.getStoredRestaurants().then((restaurants) => {
+                restaurants.find((restaurant) => {
+                    return restaurant.id === self.restaurant.id
+                }).is_favorite = rest.is_favorite;
+
+                DBHelper.saveRestaurantsInDatabase(restaurants);
+
+
+            });
+        })
+    });
+
 
     if(!window.navigator.onLine) {
 
@@ -200,7 +313,7 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
 
     //submit button
     const submitButton = document.createElement('button');
-    submitButton.setAttribute('class', 'submit-review');
+    submitButton.setAttribute('id', 'submit-review');
     submitButton.innerHTML = "Submit";
     addReviewContainer.appendChild(submitButton);
 
@@ -211,49 +324,79 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
   });
 
     submitButton.addEventListener('click', (e) => {
-      e.preventDefault();
+        e.preventDefault();
 
-      const formData = {
-          restaurant_id: self.restaurant.id,
-          name: userName.value,
-          rating: selectReviewRate.value,
-          comments: comments.value
+        let cachedReviews = [];
 
-      };
+        const formData = {
+            restaurant_id: self.restaurant.id,
+            name: userName.value,
+            rating: selectReviewRate.value,
+            comments: comments.value
 
-      DBHelper.addNewReview(formData).then((response) => {
-          console.log(response + "---------");
-          if(!window.navigator.onLine){
+        };
 
-              //update reviews from local storage
-              let reviews = JSON.parse(window.localStorage.getItem('reviews'));
-              reviews.push(response);
-              window.localStorage.setItem('reviews', JSON.stringify(reviews));
+        DBHelper.addNewReview(formData).then((response) => {
+            if (!window.navigator.onLine) {
+                navigator.serviceWorker.ready.then(function (swRegistration) {
+                    swRegistration.sync.register('syncRequestReviewSubmission');
+                })
 
-          }
-      });
+                DBHelper.getStoredReviews().then((reviews) => {
+                    let reviewId = reviews.length + 1;
+                    formData.createdAt = Date.now();
+                    formData.id = reviewId;
+                    reviews.push(formData);
+                    cachedReviews = reviews;
+                    return DBHelper.saveReviewsInDatabase(reviews);
+                }).then(() => {
+                    console.log("Reviews saved");
 
-    });
 
-    DBHelper.getAllReviewsForRestaurant(self.restaurant.id).then((reviews) => {
-        if (!reviews) {
-            const noReviews = document.createElement('p');
-            noReviews.innerHTML = 'No reviews yet!';
-            container.appendChild(noReviews);
-            return;
-        }
-        if(!window.navigator.onLine){
-            reviews = JSON.parse(window.localStorage.getItem('reviews'));
-        }
-
-        const ul = document.getElementById('reviews-list');
-        reviews.forEach(review => {
-            ul.appendChild(createReviewHTML(review));
+                });
+            }
         });
-        container.appendChild(ul);
-
-        window.localStorage.setItem('reviews', JSON.stringify(reviews));
     });
+
+        DBHelper.getAllReviewsForRestaurant(self.restaurant.id).then((reviews) => {
+            if (!reviews) {
+                const noReviews = document.createElement('p');
+                noReviews.innerHTML = 'No reviews yet!';
+                container.appendChild(noReviews);
+                return;
+
+            }
+
+            DBHelper.saveReviewsInDatabase(reviews);
+
+            const ul = document.getElementById('reviews-list');
+            reviews.forEach((review) => {
+                ul.appendChild(createReviewHTML(review));
+            });
+            container.appendChild(ul);
+
+            //window.localStorage.setItem('reviews', JSON.stringify(reviews));
+        }).catch((error) => {
+            console.log("err");
+            if (!window.navigator.onLine) {
+                DBHelper.getStoredReviews().then((idbReviews) => {
+                    reviews = idbReviews;
+
+                    navigator.serviceWorker.ready.then(function(swRegistration) {
+                        swRegistration.sync.register('syncRequestReviewSubmission');
+                    });
+
+                    const ul = document.getElementById('reviews-list');
+                    reviews.forEach((review) => {
+                        ul.appendChild(createReviewHTML(review));
+                    });
+                    container.appendChild(ul);
+                });
+
+
+
+            }
+        });
 };
 
 /**
@@ -309,6 +452,7 @@ getParameterByName = (name, url) => {
 /**
  * Register serviceWorker
  */
+
 registerServiceWorker = () => {
     if (!navigator.serviceWorker) return;
 
@@ -319,3 +463,16 @@ registerServiceWorker = () => {
 
     });
 }
+
+window.addEventListener('online', () => {
+    // navigator.serviceWorker.ready.then(function(swRegistration) {
+    //     swRegistration.sync.register('syncRequestReviewSubmission');
+    // });
+
+    DBHelper.getStoredReviews().then((reviews) => {
+        const lastReview = reviews.pop();
+        return DBHelper.addNewReview(lastReview);
+    }).then(() => {
+        console.log("Review added");
+    });
+})

@@ -1,10 +1,28 @@
+importScripts('/js/dbhelper.js');
+
+const CACHE_REST = 'restaurants-cache';
+
+let allCaches = [
+    CACHE_REST
+];
+
 self.addEventListener('install', (function(event){
     event.waitUntil(
-        caches.open('restaurants-cache').then(function(cache){
+        caches.open(CACHE_REST).then(function(cache){
            return cache.addAll([
                '/',
                'index.html',
                'restaurant.html',
+               'restaurant.html?id=1',
+               'restaurant.html?id=2',
+               'restaurant.html?id=3',
+               'restaurant.html?id=4',
+               'restaurant.html?id=5',
+               'restaurant.html?id=6',
+               'restaurant.html?id=7',
+               'restaurant.html?id=8',
+               'restaurant.html?id=9',
+               'restaurant.html?id=10',
                'js/main.js',
                'js/idb.js',
                'js/dbhelper.js',
@@ -49,4 +67,17 @@ self.addEventListener('fetch', function(event) {
             return response || fetch(event.request);
         })
     );
+});
+
+self.addEventListener('sync', function(event) {
+    if (event.tag == 'syncRequestReviewSubmission') {
+        debugger;
+        let formData = {}
+        DBHelper.getStoredReviews().then((reviews) => {
+            console.log(reviews);
+           //formData = reviews.pop();
+            //event.waitUntil(DBHelper.addNewReview(formData))
+        });
+
+    }
 });
